@@ -1,6 +1,4 @@
 from validators import BoardValidator
-
-
 class ChessBoard:
     def __init__(self):
         self._grid = []
@@ -67,35 +65,75 @@ class ChessBoard:
                 print(self.get_canonical_representation())  # מפעיל את הדפסת הלוח
 
     def _handle_click(self, x: int, y: int):
-        """פונקציה שממירה פיקסלים למשבצות ומחליטה אם לבחור, להחליף או להזיז כלי"""
+        """ממירה פיקסלים למשבצות ומנהלת את התנועה רק אם היא חוקית"""
         col = x // 100
         row = y // 100
 
-        # הגנה: אם הלחיצה היא מחוץ לגבולות הלוח - הקוד מתעלם
+        # הגנה מפני לחיצה מחוץ ללוח
         if row < 0 or row >= len(self._grid) or col < 0 or col >= len(self._grid[0]):
             return
 
         clicked_piece = self._grid[row][col]
 
-        # תרחיש א': אם עדיין לא נבחר אף כלי
+        # תרחיש א': אין כלי נבחר כרגע בזיכרון
         if self.selected_piece_pos is None:
             if clicked_piece != ".":
                 self.selected_piece_pos = (row, col)  # בוחרים את הכלי
-            else:
-                return
+            return  # אם לחצו על תא ריק, פשוט עוצרים כאן
 
-        # תרחיש ב': אם כבר יש כלי שנבחר בלחיצה הקודמת
-        else:
-            prev_row, prev_col = self.selected_piece_pos
-            current_selected_piece = self._grid[prev_row][prev_col]
+        # תרחיש ב': כבר יש כלי נבחר, ועכשיו לוחצים על יעד חדש
+        prev_row, prev_col = self.selected_piece_pos
+        current_selected_piece = self._grid[prev_row][prev_col]
 
-            # בדיקה האם המשבצת החדשה אינה ריקה, והאם הצבע שלה שווה לצבע הכלי הנבחר
-            if clicked_piece != "." and clicked_piece[0] == current_selected_piece[0]:
-                self.selected_piece_pos = (row, col)  # החלפת בחירה
-            else:
-                self._execute_move(prev_row, prev_col, row, col)  # ביצוע ההזזה
-                self.selected_piece_pos = None  # איפוס הבחירה
+        # 1. אם השחקן לחץ שוב על אותו הכלי בדיוק - נבטל את הבחירה
+        if row == prev_row and col == prev_col:
+            self.selected_piece_pos = None
+            return
 
+        # 2. אם לחצו על כלי אחר של אותו שחקן (אותה אות ראשונה 'w' או 'b') - מחליפים בחירה
+        if clicked_piece != "." and clicked_piece[0] == current_selected_piece[0]:
+            self.selected_piece_pos = (row, col)
+            return
+
+        # 3. אם הגענו לכאן, השחקן מנסה לבצע מהלך (לתא ריק או לאכול כלי אויב)
+        # נבדוק אם המהלך חוקי מבחינת הצורה של הכלי!
+        if self._is_move_legal(current_selected_piece, prev_row, prev_col, row, col):
+            self._execute_move(prev_row, prev_col, row, col)
+
+        # בכל מקרה, אחרי ניסיון תנועה (חוקי או לא) - מאפסים את הבחירה
+        self.selected_piece_pos = None
+    def _is_move_legal(self, piece: str, from_row: int, from_col: int, to_row: int, to_col: int) -> bool:
+        """מחשבת מרחקים בערך מוחלט ובודקת חוקיות לפי סוג הכלי"""
+        piece_type = piece[1]  # האות השנייה (K, R, B, Q, N)
+
+        row_diff = abs(to_row - from_row)  # כמה תאים זזנו בשורות
+        col_diff = abs(to_col - from_col)  # כמה תאים זזנו בעמודות
+
+        # לחיצה על אותה משבצת בדיוק היא לא מהלך חוקי
+        if row_diff == 0 and col_diff == 0:
+            return False
+
+        # 1. מלך (King) - משבצת אחת לכל כיוון
+        if piece_type == "K":
+            return row_diff <= 1 and col_diff <= 1
+
+        # 2. צריח (Rook) - רק ישר (או שורות או עמודות)
+        elif piece_type == "R":
+            return row_diff == 0 or col_diff == 0
+
+        # 3. רץ (Bishop) - רק באלכסונים מושלמים
+        elif piece_type == "B":
+            return row_diff == col_diff
+
+        # 4. מלכה (Queen) - שילוב של צריח ורץ (ישר או אלכסון)
+        elif piece_type == "Q":
+            return (row_diff == 0 or col_diff == 0) or (row_diff == col_diff)
+
+        # 5. פרש (Knight) - תנועת L (2 ו-1 או 1 ו-2)
+        elif piece_type == "N":
+            return (row_diff == 2 and col_diff == 1) or (row_diff == 1 and col_diff == 2)
+
+        return False
     def _execute_move(self, from_row: int, from_col: int, to_row: int, to_col: int):
         """הפונקציה שהייתה חסרה! מבצעת את ההזזה הפיזית בתוך המערך"""
         piece = self._grid[from_row][from_col]  # לוקח את הכלי מהמיקום המקורי
