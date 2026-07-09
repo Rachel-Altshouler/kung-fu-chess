@@ -1,14 +1,15 @@
 import sys
 from board import ChessBoard
+# URL: https://github.com/Rachel-Altshouler/kung-fu-chess
 
 def main():
-    # URL: https://github.com/Rachel-Altshouler/kung-fu-chess
-    input_lines = sys.stdin.readlines()
     board = ChessBoard()
-    success = board.load_from_text_lines(input_lines)
-    if not success:
+
+    input_lines = sys.stdin.readlines()
+
+    if not board.load_from_text_lines(input_lines):
         return
-    print(board.get_canonical_representation())
+    board.process_commands(input_lines)
 
 if __name__ == "__main__":
     main()

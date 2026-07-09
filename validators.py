@@ -1,17 +1,29 @@
-from constants import VALID_COLORS, VALID_PIECE_TYPES, EMPTY_CELL
+from constants import BoardConstants, Colors, PieceTypes
+
 
 class BoardValidator:
     @staticmethod
     def is_token_valid(token: str) -> bool:
-        if token == EMPTY_CELL:
+        if token == BoardConstants.EMPTY_CELL:
             return True
         if len(token) != 2:
             return False
-        return token[0] in VALID_COLORS and token[1] in VALID_PIECE_TYPES
+        piece_color = token[0]
+        piece_type = token[1]
+
+        if piece_color not in {Colors.WHITE, Colors.BLACK}:
+            return False
+        if piece_type not in {PieceTypes.KING, PieceTypes.ROOK, PieceTypes.BISHOP, PieceTypes.QUEEN, PieceTypes.KNIGHT,
+                              PieceTypes.PAWN}:
+            return False
+        return True
 
     @staticmethod
-    def validate_row_widths(rows: list) -> bool:
-        if not rows:
+    def validate_row_widths(grid: list) -> bool:
+        if not grid:
             return True
-        expected_width = len(rows[0])
-        return all(len(row) == expected_width for row in rows)
+        expected_width = len(grid[0])
+        for row in grid:
+            if len(row) != expected_width:
+                return False
+        return True
