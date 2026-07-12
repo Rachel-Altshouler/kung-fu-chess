@@ -2,11 +2,9 @@ class BoardConstants:
     CELL_SIZE = 100
     EMPTY_CELL = "."
 
-
 class Colors:
     WHITE = "w"
     BLACK = "b"
-
 
 class PieceTypes:
     KING = "K"
@@ -16,11 +14,6 @@ class PieceTypes:
     KNIGHT = "N"
     PAWN = "P"
 
-
-class InputHeaders:
-    BOARD_HEADER = "Board:"
-    COMMANDS_HEADER = "Commands:"
-
 class InputHeaders:
     BOARD_HEADER = "Board:"
     COMMANDS_HEADER = "Commands:"
@@ -29,7 +22,6 @@ class Commands:
     CLICK = "click"
     WAIT = "wait"
     PRINT_BOARD = "print board"
-
 
 class MoveResult:
     OK = "ok"

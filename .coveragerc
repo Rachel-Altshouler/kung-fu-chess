@@ -1,0 +1,13 @@
+[run]
+source = .
+omit =
+    tests/*
+    */__pycache__/*
+
+[report]
+include =
+    model/*
+    game_io/*
+    main.py
+show_missing = True
+skip_empty = True
