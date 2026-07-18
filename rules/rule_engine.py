@@ -1,3 +1,4 @@
+from model.constants import PieceTypes
 from model.piece import Piece
 from rules.piece_rules import PieceRules
 
@@ -37,6 +38,12 @@ class RuleEngine:
         destination_piece = Piece.from_token(destination_token)
 
         if destination_piece is not None and source_piece.is_same_color(destination_piece):
+            return False
+
+        if (
+            destination_piece is not None
+            and destination_piece.piece_type == PieceTypes.KING
+        ):
             return False
 
         return PieceRules.is_piece_move_valid(

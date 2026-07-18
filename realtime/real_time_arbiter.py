@@ -1,4 +1,4 @@
-from model.constants import BoardConstants
+from model.constants import BoardConstants, PieceTypes
 from model.piece import Piece
 from realtime.motion import Motion
 
@@ -22,6 +22,8 @@ class RealTimeArbiter:
                 other_piece = Piece.from_token(other.piece_token)
                 if jumper_piece.is_same_color(other_piece):
                     continue
+                if other_piece.piece_type == PieceTypes.KING:
+                    continue
 
                 arrival_time = RealTimeArbiter._find_arrival_during_jump(
                     other.path, jumper.source, jump_start, jump_end
@@ -34,6 +36,36 @@ class RealTimeArbiter:
                 jumper.airborne_capture_occurred = True
 
         return captured
+
+    @staticmethod
+    def find_jump_capturer(captured_movement, active_movements):
+        captured_piece = Piece.from_token(captured_movement.piece_token)
+        if captured_piece is None:
+            return None
+
+        for jumper in active_movements:
+            if not Motion.is_jump_movement(jumper):
+                continue
+
+            jumper_piece = Piece.from_token(jumper.piece_token)
+            if jumper_piece is None:
+                continue
+            if jumper_piece.is_same_color(captured_piece):
+                continue
+
+            arrival_time = RealTimeArbiter._find_arrival_during_jump(
+                captured_movement.path,
+                jumper.source,
+                jumper.start_time,
+                jumper.finish_time,
+            )
+            if arrival_time is None:
+                continue
+            if not getattr(jumper, "airborne_capture_occurred", False):
+                continue
+            return jumper
+
+        return None
 
     @staticmethod
     def _find_arrival_during_jump(path, cell, jump_start, jump_end):
@@ -67,11 +99,8 @@ class RealTimeArbiter:
 
             if piece.is_same_color(other_piece):
                 if movement.movement_id > other.movement_id:
-                    destination = RealTimeArbiter._cell_before_on_path(
-                        movement.path, conflict[0]
-                    )
-                elif movement.movement_id < other.movement_id:
-                    continue
+                    return movement.source
+                continue
             else:
                 if movement.movement_id > other.movement_id:
                     destination = conflict[0]

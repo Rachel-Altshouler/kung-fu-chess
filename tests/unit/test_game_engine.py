@@ -42,7 +42,7 @@ class TestGameEngine(unittest.TestCase):
 
     def test_handle_click_capture_enemy(self):
         self.board.set_grid([
-            ['wR', '.', 'bK'],
+            ['wR', '.', 'bR'],
             ['.', '.', '.'],
             ['.', '.', '.']
         ])
@@ -92,7 +92,7 @@ class TestGameEngine(unittest.TestCase):
         self.assertEqual(self.board.get_piece_at((0, 0)), 'wK')
         self.assertTrue(self.board.is_empty((1, 1)))
 
-    def test_can_move_again_immediately_after_arrival_without_cooldown(self):
+    def test_cannot_move_again_until_cooldown_expires(self):
         self.board.set_grid([
             ['wK', '.', '.'],
             ['.', '.', '.'],
@@ -103,16 +103,21 @@ class TestGameEngine(unittest.TestCase):
         self.engine.handle_wait(100)
         self.assertFalse(self.engine.is_moving())
         self.assertEqual(self.board.get_piece_at((1, 1)), 'wK')
+        self.assertTrue(self.engine.is_piece_on_cooldown((1, 1)))
 
-        clock_before_second_move = self.engine.get_clock()
+        self.engine.handle_click(150, 150)
+        self.engine.handle_click(250, 250)
+        self.assertFalse(self.engine.is_moving())
+        self.assertEqual(self.board.get_piece_at((1, 1)), 'wK')
+
+        self.engine.handle_wait(500)
+        self.assertFalse(self.engine.is_piece_on_cooldown((1, 1)))
+
         self.engine.handle_click(150, 150)
         self.engine.handle_click(250, 250)
         self.assertTrue(self.engine.is_moving())
-        self.assertEqual(self.engine.get_clock(), clock_before_second_move)
-
         self.engine.handle_wait(100)
         self.assertEqual(self.board.get_piece_at((2, 2)), 'wK')
-        self.assertTrue(self.board.is_empty((1, 1)))
 
     def test_handle_click_white_pawn_move(self):
         self.board.set_grid([
@@ -266,7 +271,7 @@ class TestGameEngine(unittest.TestCase):
         self.assertEqual(self.board.get_piece_at((1, 1)), 'bK')
         self.assertEqual(self.board.get_piece_at((0, 0)), 'wR')
 
-    def test_friendly_crossing_stops_later_piece(self):
+    def test_friendly_crossing_returns_later_piece_to_source(self):
         self.board.set_grid([
             ['.', '.', '.', '.'],
             ['wR', '.', '.', '.'],
@@ -277,7 +282,7 @@ class TestGameEngine(unittest.TestCase):
         self.engine.try_move((3, 2), (0, 2))
         self.engine.try_move((1, 0), (1, 3))
         self.engine.handle_wait(300)
-        self.assertEqual(self.board.get_piece_at((1, 1)), 'wR')
+        self.assertEqual(self.board.get_piece_at((1, 0)), 'wR')
         self.assertEqual(self.board.get_piece_at((0, 2)), 'wQ')
 
     def test_pawn_cannot_capture_forward_during_game(self):
@@ -346,7 +351,7 @@ class TestGameEngine(unittest.TestCase):
         self.assertEqual(boards[1], "wK . .\n. . .\n. . .")
         self.assertEqual(boards[2], ". . .\n. wK .\n. . .")
 
-    def test_consecutive_moves_without_cooldown(self):
+    def test_consecutive_moves_require_cooldown(self):
         self.board.set_grid([
             ['wK', '.', '.'],
             ['.', '.', '.'],
@@ -357,13 +362,12 @@ class TestGameEngine(unittest.TestCase):
                 "click 50 50",
                 "click 150 150",
                 "wait 100",
+                "wait 500",
                 "click 150 150",
                 "click 250 250",
                 "wait 100",
             ])
         self.assertEqual(self.board.get_piece_at((2, 2)), 'wK')
-        self.assertTrue(self.board.is_empty((0, 0)))
-        self.assertTrue(self.board.is_empty((1, 1)))
 
     def test_script_runner_empty_line(self):
         ScriptRunner.run(self.engine, ["", "   "])
@@ -388,36 +392,67 @@ class TestGameEngine(unittest.TestCase):
              patch.object(sys, 'stdout', io.StringIO()):
             runpy.run_module('app', run_name='__main__')
 
-    def test_capturing_enemy_king_ends_game(self):
+    def test_cannot_capture_king(self):
         self.board.set_grid([
             ['wR', '.', 'bK'],
             ['.', '.', '.'],
             ['.', '.', '.']
         ])
-        self.engine.handle_click(50, 50)
-        self.engine.handle_click(250, 50)
-        self.engine.handle_wait(200)
-        self.assertTrue(self.engine.is_game_over())
-        self.assertEqual(self.board.get_piece_at((0, 2)), 'wR')
-        self.assertTrue(self.board.is_empty((0, 0)))
+        self.assertFalse(self.engine.try_move((0, 0), (0, 2)))
+        self.assertEqual(self.board.get_piece_at((0, 2)), 'bK')
+        self.assertEqual(self.board.get_piece_at((0, 0)), 'wR')
+        self.assertFalse(self.engine.is_game_over())
 
-    def test_late_move_commands_ignored_after_game_over(self):
+    def test_check_threat_ends_game_in_engine(self):
         self.board.set_grid([
             ['wR', '.', 'bK'],
             ['.', '.', '.'],
             ['wK', '.', '.']
         ])
-        self.engine.try_move((0, 0), (0, 2))
-        self.engine.handle_wait(200)
+        self.engine.handle_wait(0)
+        self.assertTrue(self.engine.is_game_over())
+        self.assertEqual(self.engine.get_winner(), 'w')
+
+    def test_checkmate_ends_game_before_king_can_be_captured(self):
+        self.board.set_grid([
+            ['.', 'wR', 'bK'],
+            ['wK', 'wR', '.'],
+            ['.', '.', '.']
+        ])
+        self.engine.handle_wait(0)
+        self.assertTrue(self.engine.is_game_over())
+        self.assertEqual(self.engine.get_winner(), 'w')
+        self.assertFalse(self.engine.is_stalemate())
+        self.assertEqual(self.board.get_piece_at((0, 2)), 'bK')
+        self.assertFalse(self.engine.try_move((0, 1), (0, 2)))
+
+    def test_stalemate_ends_game(self):
+        grid = [['.' for _ in range(8)] for _ in range(8)]
+        grid[0][2] = 'bK'
+        grid[2][1] = 'wQ'
+        grid[2][2] = 'wK'
+        self.board.set_grid(grid)
+        self.engine.handle_wait(0)
+        self.assertTrue(self.engine.is_game_over())
+        self.assertTrue(self.engine.is_stalemate())
+        self.assertIsNone(self.engine.get_winner())
+
+    def test_late_move_commands_ignored_after_game_over(self):
+        self.board.set_grid([
+            ['.', 'wR', 'bK'],
+            ['wK', 'wR', '.'],
+            ['.', '.', '.']
+        ])
+        self.engine.handle_wait(0)
         self.assertTrue(self.engine.is_game_over())
 
         self.engine.handle_click(50, 250)
         self.engine.handle_click(150, 250)
         self.engine.handle_wait(100)
-        self.assertEqual(self.board.get_piece_at((2, 0)), 'wK')
-        self.assertTrue(self.board.is_empty((1, 1)))
+        self.assertEqual(self.board.get_piece_at((1, 0)), 'wK')
+        self.assertEqual(self.board.get_piece_at((1, 1)), 'wR')
 
-        self.assertFalse(self.engine.try_move((2, 0), (1, 1)))
+        self.assertFalse(self.engine.try_move((1, 0), (2, 0)))
 
     def test_white_pawn_promotes_to_queen_on_last_row(self):
         self.board.set_grid([
@@ -512,7 +547,7 @@ class TestGameEngine(unittest.TestCase):
         self.engine.handle_wait(100)
         self.assertFalse(self.engine.try_move((0, 1), (1, 1)))
 
-    def test_knight_jump_capture_king_ends_game(self):
+    def test_knight_jump_cannot_capture_king(self):
         self.board.set_grid([
             ['bK', '.', '.', '.'],
             ['.', 'wN', '.', '.'],
@@ -522,7 +557,9 @@ class TestGameEngine(unittest.TestCase):
         self.engine.try_move((1, 1), (2, 3))
         self.engine.try_move((0, 0), (1, 1))
         self.engine.handle_wait(100)
-        self.assertTrue(self.engine.is_game_over())
+        self.assertFalse(self.engine.is_game_over())
+        self.assertEqual(self.board.get_piece_at((0, 0)), '.')
+        self.assertEqual(self.board.get_piece_at((1, 1)), 'bK')
 
     def test_jump_command_lands_same_square(self):
         self.board.set_grid([
@@ -537,25 +574,54 @@ class TestGameEngine(unittest.TestCase):
     def test_jump_command_captures_arriving_enemy(self):
         self.board.set_grid([
             ['.', '.', '.'],
-            ['wK', 'bR', '.'],
-            ['.', '.', '.']
-        ])
-        self.engine.handle_jump(150, 150)
-        self.engine.handle_click(150, 150)
-        self.engine.handle_click(50, 150)
-        self.engine.handle_wait(1000)
-        self.assertEqual(self.board.get_piece_at((1, 0)), 'wK')
-        self.assertTrue(self.board.is_empty((1, 1)))
-
-    def test_jump_on_friendly_cell_captures_arriving_enemy(self):
-        self.board.set_grid([
-            ['.', '.', '.'],
-            ['wK', 'bR', '.'],
+            ['wR', 'bR', '.'],
             ['.', '.', '.']
         ])
         self.engine.handle_jump(50, 150)
         self.engine.handle_click(150, 150)
         self.engine.handle_click(50, 150)
         self.engine.handle_wait(1000)
-        self.assertEqual(self.board.get_piece_at((1, 0)), 'wK')
+        self.assertEqual(self.board.get_piece_at((1, 0)), 'wR')
         self.assertTrue(self.board.is_empty((1, 1)))
+
+    def test_jump_on_friendly_cell_captures_arriving_enemy(self):
+        self.board.set_grid([
+            ['.', '.', '.'],
+            ['wR', 'bR', '.'],
+            ['.', '.', '.']
+        ])
+        self.engine.handle_jump(50, 150)
+        self.engine.handle_click(150, 150)
+        self.engine.handle_click(50, 150)
+        self.engine.handle_wait(1000)
+        self.assertEqual(self.board.get_piece_at((1, 0)), 'wR')
+        self.assertTrue(self.board.is_empty((1, 1)))
+
+    def test_jump_on_clicked_piece(self):
+        self.board.set_grid([
+            ['.', '.', '.', '.', '.', '.', '.', '.'],
+            ['.', '.', '.', '.', '.', '.', '.', '.'],
+            ['.', '.', '.', '.', '.', '.', '.', '.'],
+            ['.', '.', '.', '.', '.', '.', '.', '.'],
+            ['.', '.', '.', 'wP', '.', '.', '.', '.'],
+            ['.', '.', 'bP', '.', '.', '.', '.', '.'],
+            ['.', '.', '.', '.', '.', '.', '.', '.'],
+            ['.', '.', '.', '.', '.', '.', '.', '.'],
+        ])
+        self.engine.handle_jump(250, 550)
+        active = self.engine.get_active_movements()
+        self.assertEqual(len(active), 1)
+        self.assertEqual(active[0].piece_token, 'bP')
+        self.assertEqual(active[0].source, (5, 2))
+
+    def test_jump_on_black_does_not_move_adjacent_white(self):
+        self.board.set_grid([
+            ['.', '.', '.'],
+            ['wP', 'bP', '.'],
+            ['.', '.', '.'],
+        ])
+        self.engine.handle_jump(150, 150)
+        active = self.engine.get_active_movements()
+        self.assertEqual(len(active), 1)
+        self.assertEqual(active[0].piece_token, 'bP')
+        self.assertEqual(active[0].source, (1, 1))

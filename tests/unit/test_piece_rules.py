@@ -133,11 +133,12 @@ class TestPieceRules(unittest.TestCase):
         self.assertTrue(PieceRules.is_pawn_move(white_grid, (2, 1), (0, 1), 'w'))
 
         black_grid = [
+            ['.', '.', '.'],
             ['.', 'bP', '.'],
             ['.', '.', '.'],
             ['.', '.', '.'],
         ]
-        self.assertTrue(PieceRules.is_pawn_move(black_grid, (0, 1), (2, 1), 'b'))
+        self.assertTrue(PieceRules.is_pawn_move(black_grid, (1, 1), (3, 1), 'b'))
 
     def test_pawn_two_square_blocked_when_path_not_clear(self):
         grid = [

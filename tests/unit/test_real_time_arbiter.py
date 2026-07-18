@@ -28,11 +28,11 @@ class TestRealTimeArbiter(unittest.TestCase):
             is_jump=is_jump or piece_type == 'N',
         )
 
-    def test_friendly_path_conflict_stops_later_piece(self):
+    def test_friendly_path_conflict_returns_later_piece_to_source(self):
         first = self._make_movement(1, 'wQ', (3, 2), (0, 2), 0)
         second = self._make_movement(2, 'wR', (1, 0), (1, 3), 0)
         destination = RealTimeArbiter.resolve_destination(second, [first, second], self.board)
-        self.assertEqual(destination, (1, 1))
+        self.assertEqual(destination, (1, 0))
 
     def test_enemy_collision_later_piece_wins_square(self):
         first = self._make_movement(1, 'wR', (0, 0), (1, 1), 0)

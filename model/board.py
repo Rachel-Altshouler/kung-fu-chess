@@ -46,3 +46,29 @@ class ChessBoard:
         piece = self.get_piece_at(source)
         self.set_piece_at(destination, piece)
         self.set_piece_at(source, BoardConstants.EMPTY_CELL)
+
+    def get_all_pieces(self):
+        pieces_data = []
+        grid = self._grid
+        for row in range(len(grid)):
+            for col in range(len(grid[0])):
+                token = grid[row][col]
+                if token != BoardConstants.EMPTY_CELL:
+                    pieces_data.append({"token": token, "pos": (row, col)})
+        return pieces_data
+
+    @staticmethod
+    def create_standard_setup():
+        board = ChessBoard()
+        empty_row = [BoardConstants.EMPTY_CELL] * 8
+        board.set_grid([
+            ["bR", "bN", "bB", "bQ", "bK", "bB", "bN", "bR"],
+            ["bP", "bP", "bP", "bP", "bP", "bP", "bP", "bP"],
+            empty_row[:],
+            empty_row[:],
+            empty_row[:],
+            empty_row[:],
+            ["wP", "wP", "wP", "wP", "wP", "wP", "wP", "wP"],
+            ["wR", "wN", "wB", "wQ", "wK", "wB", "wN", "wR"],
+        ])
+        return board

@@ -69,7 +69,7 @@ class PieceRules:
     def _pawn_start_row(color, num_rows):
         if color == Colors.WHITE:
             return num_rows - 2
-        return 0
+        return 1
 
     @staticmethod
     def is_pawn_move(grid, source_position, destination_position, color) -> bool:

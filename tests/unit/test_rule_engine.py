@@ -34,11 +34,19 @@ class TestRuleEngine(unittest.TestCase):
 
     def test_can_capture_enemy_piece(self):
         self.board.set_grid([
-            ['wR', '.', 'bK'],
+            ['wR', '.', 'bR'],
             ['.', '.', '.'],
             ['.', '.', '.']
         ])
         self.assertTrue(RuleEngine.is_valid_move(self.board, (0, 0), (0, 2)))
+
+    def test_cannot_capture_enemy_king(self):
+        self.board.set_grid([
+            ['wR', '.', 'bK'],
+            ['.', '.', '.'],
+            ['.', '.', '.']
+        ])
+        self.assertFalse(RuleEngine.is_valid_move(self.board, (0, 0), (0, 2)))
 
     def test_white_pawn_forward_move(self):
         self.board.set_grid([
@@ -58,7 +66,7 @@ class TestRuleEngine(unittest.TestCase):
 
     def test_pawn_diagonal_capture(self):
         self.board.set_grid([
-            ['.', '.', 'bK'],
+            ['.', '.', 'bR'],
             ['.', 'wP', '.'],
             ['.', '.', '.']
         ])

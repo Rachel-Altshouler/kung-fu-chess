@@ -14,7 +14,7 @@ EXPECTED_BOARDS = {
     "03_rook_moves.kfc": ". . . wR\n. . . .\n. . . .",
     "04_invalid_moves.kfc": "wK . .\n. . .\n. . .",
     "05_capture.kfc": ". . wR\n. . .\n. . .",
-    "06_game_over.kfc": ". . wR\n. . .\nwK . .",
+    "06_game_over.kfc": ". wR bK\nwK wR .\n. . .",
 }
 
 
