@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.pyo
+.idea/
+*.iml
+*.db
+*.log
+server/logs/
+client/logs/
+.local_room_id
+.coverage
+htmlcov/
+.venv/
+venv/
